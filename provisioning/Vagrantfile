@@ -1,0 +1,41 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+def forward_ports(vm, port_numbers, initial_port_number=nil)
+  initial_port_number ||= 0
+  port_numbers.each do |port_number|
+    vm.network "forwarded_port", guest: port_number, host: (initial_port_number + port_number)
+  end
+end
+
+PORTS_OVER_10K = [11211, 35050, 35357, 38396, 47413]
+PORTS_UNDER_10K = [22, 80, 111, 873, 3260, 3306, 4369, 5000, 5672, 6011, 6012,
+                   6013, 6080, 8080, 8773, 8774, 8775, 8776, 8777, 9191, 9292,
+                   9696]
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  config.vm.box = "ubuntu/trusty64"
+
+  config.vm.network "private_network", ip: "192.168.50.4"
+  forward_ports(config.vm, PORTS_UNDER_10K, 50000)
+  forward_ports(config.vm, PORTS_OVER_10K)
+
+  config.vm.provider :virtualbox do |vb|
+    vb.customize ["modifyvm", :id, "--memory", "8192"]
+    vb.customize ["modifyvm", :id, "--cpus", "4"]
+  end
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "site.yml"
+    ansible.sudo = true
+    ansible.host_key_checking = false
+    ansible.raw_ssh_args = '-o UserKnownHostsFile=/dev/null'
+    ansible.verbose =  'vvvv'
+  end
+
+  config.vm.provision "shell", inline: "~/devstack/stack.sh", run: "always", privileged: false
+
+end
