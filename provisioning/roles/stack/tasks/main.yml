@@ -1,0 +1,4 @@
+- git: repo=https://git.openstack.org/openstack-dev/devstack dest=~/devstack
+  sudo: false
+- copy: src=files/local.conf dest=~/devstack/local.conf
+  sudo: false
